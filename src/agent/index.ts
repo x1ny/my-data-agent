@@ -5,6 +5,8 @@ export { flattenObject } from "./flattenObject";
 export { rowsToSqlite } from "./rowsToSqlite";
 export { createSqliteQueryTool } from "./sqliteQueryTool";
 export { createNotebookTools } from "./notebookTool";
+export { createDocumentTools } from "./createDocumentTools";
+export type { DocumentEntry } from "./createDocumentTools";
 export type { NotebookTools } from "./notebookTool";
 export type { CreateAgentConfig, AgentRuntime, AgentResult, AgentStep, Tool } from "./types";
 export type { ColumnMeta, IngestOptions, IngestResult, FlattenOptions, Inferred, DataRow } from "./types";
