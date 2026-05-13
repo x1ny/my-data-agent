@@ -1,6 +1,6 @@
 import { writeFileSync, unlinkSync, readdir, readdirSync, existsSync, rmSync } from "node:fs";
 import { Database } from "bun:sqlite";
-import { csvToSqlite, jsonObjectToSqlite, flattenObject, type IngestResult, createAgent } from "./agent";
+import { csvToSqlite, jsonObjectToSqlite, flattenObject, type IngestResult, createAgent, createNotebookTools } from "./agent";
 import path from "node:path";
 import { exportTableToCsv, formatIngestResult } from "./utils";
 import { createSqliteQueryTool } from "./agent/sqliteQueryTool";
@@ -87,7 +87,11 @@ for (const taskName of taskNames) {
     这是背景知识：
     ${knowledge}
 
-    你可以使用的工具是: query_sqlite，这个工具可以让你查询数据库中的数据。
+    你可以使用的工具是: 
+    
+    query_sqlite，这个工具可以让你查询数据库中的数据。
+    write_notebook，这个工具可以让你写入notebook中的内容, 请把你的步骤规划、分析过程、重要知识点，以简洁的语句写入进去。
+    read_notebook，这个工具可以让你读取notebook中的内容。
 
     你需要回答的问题是: ${task_json.question}
 
@@ -98,19 +102,24 @@ for (const taskName of taskNames) {
 
     console.log(systemPrompt);
 
+    const { readNotebook, writeNotebook } =  createNotebookTools()
+
     const agent = createAgent({
       tools: [
         createSqliteQueryTool(db),
+        readNotebook,
+        writeNotebook,
       ],
       systemPrompt: systemPrompt,
-      maxIterations: 10,
+      maxIterations: 100,
       temperature: 0,
       onStep: (step) => {
         console.log(step);
       },
     })
 
-    const result = await agent.invoke('请开始分析问题，并给出分析结果。');
+    const result = await agent.invoke('请开始分析问题，并给出分析结果。请先在notebook写入你的初步规划。');
+    console.log(await readNotebook.execute({}));
     console.log(result.finalAnswer);
 
     //打印出db的表名
