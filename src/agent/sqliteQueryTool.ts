@@ -10,12 +10,12 @@ export function createSqliteQueryTool(db: Database): Tool {
   return {
     name: "query_sqlite",
     description:
-      "Execute a read-only SQL query against the SQLite database. " +
-      "Only SELECT and PRAGMA statements are allowed. " +
-      "Results are auto-limited to 1000 rows unless you specify a LIMIT. " +
+      "Execute a SQL statement against the SQLite database. " +
+      "Supports all SQL: SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, PRAGMA, etc. " +
+      "SELECT results are auto-limited to 1000 rows unless you specify a LIMIT. " +
       "All table and column names must be wrapped in double quotes if they contain spaces or special characters.",
     schema: z.object({
-      sql: z.string().describe("A read-only SQL query (SELECT or PRAGMA)"),
+      sql: z.string().describe("A SQL statement to execute"),
     }),
     execute: async ({ sql }) => {
       return executeSql(db, sql);
@@ -27,17 +27,35 @@ function executeSql(db: Database, sql: string): string {
   const trimmed = sql.trim();
   const upper = trimmed.toUpperCase();
 
-  if (
-    !upper.startsWith("SELECT") &&
-    !upper.startsWith("PRAGMA") &&
-    !upper.startsWith("EXPLAIN") &&
-    !upper.startsWith("WITH")
-  ) {
-    return formatError("Only SELECT, PRAGMA, EXPLAIN, and WITH queries are allowed");
-  }
+  const isWrite =
+    upper.startsWith("INSERT") ||
+    upper.startsWith("UPDATE") ||
+    upper.startsWith("DELETE") ||
+    upper.startsWith("CREATE") ||
+    upper.startsWith("DROP") ||
+    upper.startsWith("ALTER");
 
   const startTime = Date.now();
 
+  if (isWrite) {
+    let stmt;
+    try {
+      stmt = db.prepare(trimmed);
+    } catch (err) {
+      return formatError(err instanceof Error ? err.message : String(err));
+    }
+
+    try {
+      stmt.run();
+    } catch (err) {
+      return formatError(err instanceof Error ? err.message : String(err));
+    }
+
+    const elapsed = Date.now() - startTime;
+    return `[OK] Statement executed in ${elapsed}ms`;
+  }
+
+  // Read operations
   let stmt;
   try {
     stmt = db.prepare(trimmed);
@@ -74,33 +92,24 @@ function executeSql(db: Database, sql: string): string {
     colsTruncated = true;
   }
 
-  // Calculate column widths
   const widths = displayCols.map((col) => {
     let max = col.length;
     for (const row of rows) {
       const val = String((row as any)[col] ?? "NULL");
       max = Math.max(max, Math.min(val.length, DEFAULT_MAX_CELL));
     }
-    return max + 2; // padding
+    return max + 2;
   });
 
-  // Header
   const header =
     "| " +
-    displayCols
-      .map((col, i) => padRight(col, widths[i]! - 2))
-      .join(" | ") +
+    displayCols.map((col, i) => padRight(col, widths[i]! - 2)).join(" | ") +
     " |";
-
-  // Separator
   const sep =
     "|" +
-    displayCols
-      .map((_, i) => "-".repeat(widths[i]!))
-      .join("|") +
+    displayCols.map((_, i) => "-".repeat(widths[i]!)).join("|") +
     "|";
 
-  // Rows
   const rowLines: string[] = [];
   for (const row of rows) {
     const cells = displayCols.map((col, i) => {
@@ -140,17 +149,20 @@ function executeSql(db: Database, sql: string): string {
 function formatError(message: string): string {
   const lines = [`[ERROR] ${message}`];
 
-  // Simple hints for common errors
   if (message.includes("no such column")) {
     const match = message.match(/no such column: (\S+)/);
     if (match) {
-      lines.push(`\nHint: Column "${match[1]}" does not exist. Check spelling or use PRAGMA table_info to list columns.`);
+      lines.push(
+        `\nHint: Column "${match[1]}" does not exist. Check spelling or use PRAGMA table_info to list columns.`,
+      );
     }
   }
   if (message.includes("no such table")) {
     const match = message.match(/no such table: (\S+)/);
     if (match) {
-      lines.push(`\nHint: Table "${match[1]}" does not exist. Use "SELECT name FROM sqlite_master WHERE type='table'" to list available tables.`);
+      lines.push(
+        `\nHint: Table "${match[1]}" does not exist. Use "SELECT name FROM sqlite_master WHERE type='table'" to list available tables.`,
+      );
     }
   }
 

@@ -1,8 +1,8 @@
-import { writeFileSync, unlinkSync, readdir, readdirSync, existsSync } from "node:fs";
+import { writeFileSync, unlinkSync, readdir, readdirSync, existsSync, rmSync } from "node:fs";
 import { Database } from "bun:sqlite";
 import { csvToSqlite, jsonObjectToSqlite, flattenObject, type IngestResult, createAgent } from "./agent";
 import path from "node:path";
-import { formatIngestResult } from "./utils";
+import { exportTableToCsv, formatIngestResult } from "./utils";
 import { createSqliteQueryTool } from "./agent/sqliteQueryTool";
 
 const inputDir = Bun.env.INPUT_DIR || path.join(__dirname, '../input');
@@ -14,6 +14,10 @@ const entries = readdirSync(inputDir, { withFileTypes: true });
 const taskNames = entries.filter(entry => entry.isDirectory()).map(entry => entry.name);
 for (const taskName of taskNames) {
   let db: Database | undefined;
+
+  if (taskName !== 'task_38') {
+    continue;
+  }
 
   try {
 
@@ -74,6 +78,10 @@ for (const taskName of taskNames) {
     你可以使用的工具是: query_sqlite，这个工具可以让你查询数据库中的数据。
 
     你需要回答的问题是: ${task_json.question}
+
+    【注意!!!】
+    请将最终答案写入the_final_answer表里， 这张表目前不存在，请结合具体的文档、问题进行深度分析之后，确定这张表的结构，并写入最终答案。
+    结果的列要仅仅包含问题所需的必要列！不能多也不能少！
     `;
 
     console.log(systemPrompt);
@@ -101,6 +109,8 @@ for (const taskName of taskNames) {
 
     console.log("--------------------------------");
 
+    //查看the_final_answer表的具体数据
+    exportTableToCsv(db, 'the_final_answer', path.join(outputDir, taskName, 'prediction.csv'));
     prompt('')
     // console.log()
   } catch (error) {
@@ -130,4 +140,23 @@ for (const taskName of taskNames) {
 
 // const patientRows = db.query(`SELECT * FROM patient LIMIT 1`).all();
 // console.log(patientRows);
+
+// ===== Export CSV Test =====
+{
+  const testDb = new Database(":memory:");
+  testDb.run("CREATE TABLE t (id INTEGER, name TEXT, price REAL)");
+  testDb.run("INSERT INTO t VALUES (1, 'Alice', 9.99)");
+  testDb.run("INSERT INTO t VALUES (2, 'Bob, Jr.', 15.50)");
+  testDb.run("INSERT INTO t VALUES (3, 'Charlie', NULL)");
+
+  const csvPath = path.join("out", "test_export", "result.csv");
+  exportTableToCsv(testDb, "t", csvPath);
+
+  const content = await Bun.file(csvPath).text();
+  console.log("=== Export CSV Test ===");
+  console.log("Output path:", csvPath);
+  console.log(content);
+
+  rmSync("out", { recursive: true, force: true });
+}
 
