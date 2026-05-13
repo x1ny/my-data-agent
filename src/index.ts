@@ -78,10 +78,10 @@ for (const taskName of taskNames) {
     }
 
     const systemPrompt = `
-    你是一个资深的数据分析专家，擅长使用SQL查询和数据分析工具来回答用户的问题。请用中文回答。
+    你是一个资深的数据分析专家，擅长使用SQL查询和数据分析工具来回答用户的问题。
 
     
-    这是数据库的表结构：
+    ${ingest_results.length > 0 ? '这是数据库的表结构：' : ''}
     ${ingest_results.map(result => formatIngestResult(result)).join('\n')}
 
     这是背景知识：
