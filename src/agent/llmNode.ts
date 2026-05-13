@@ -1,8 +1,8 @@
 import OpenAI from "openai";
 import { AIMessage, SystemMessage } from "@langchain/core/messages";
 import type { RunnableConfig } from "@langchain/core/runnables";
-import type { AgentStep } from "../types";
-import type { ToolRegistry } from "../tools/registry";
+import type { AgentStep } from "./types";
+import type { ToolRegistry } from "./registry";
 
 const openai = new OpenAI({
   apiKey: process.env["OPENAI_API_KEY"],

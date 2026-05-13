@@ -1,9 +1,9 @@
 import { END, StateGraph } from "@langchain/langgraph";
 import { AgentState } from "./state";
-import { llmNode } from "../nodes/llmNode";
-import { toolNode } from "../nodes/toolNode";
-import { shouldContinue } from "../nodes/shouldContinue";
-import type { ToolRegistry } from "../tools/registry";
+import { llmNode } from "./llmNode";
+import { toolNode } from "./toolNode";
+import { shouldContinue } from "./shouldContinue";
+import type { ToolRegistry } from "./registry";
 
 export function buildGraph(registry: ToolRegistry) {
   const graph = new StateGraph(AgentState)

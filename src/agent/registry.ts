@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import type { Tool } from "../types";
+import type { Tool } from "./types";
 
 export class ToolRegistry {
   private tools: Map<string, Tool> = new Map();

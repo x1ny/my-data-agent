@@ -1,7 +1,7 @@
 import { HumanMessage } from "@langchain/core/messages";
-import { ToolRegistry } from "../tools/registry";
+import { ToolRegistry } from "./registry";
 import { buildGraph } from "./graph";
-import type { CreateAgentConfig, AgentRuntime } from "../types";
+import type { CreateAgentConfig, AgentRuntime } from "./types";
 
 export function createAgent(config: CreateAgentConfig): AgentRuntime {
   const registry = new ToolRegistry();

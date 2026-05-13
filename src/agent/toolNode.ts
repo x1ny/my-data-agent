@@ -1,7 +1,7 @@
 import { ToolMessage } from "@langchain/core/messages";
 import type { AIMessage } from "@langchain/core/messages";
 import type { RunnableConfig } from "@langchain/core/runnables";
-import type { ToolRegistry } from "../tools/registry";
+import type { ToolRegistry } from "./registry";
 
 export async function toolNode(
   state: any,

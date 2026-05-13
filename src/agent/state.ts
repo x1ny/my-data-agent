@@ -1,6 +1,6 @@
 import { Annotation, messagesStateReducer } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
-import type { AgentStep } from "../types";
+import type { AgentStep } from "./types";
 
 export const AgentState = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
