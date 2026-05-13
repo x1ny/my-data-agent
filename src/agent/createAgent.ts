@@ -16,6 +16,7 @@ export function createAgent(config: CreateAgentConfig): AgentRuntime {
     const result = await compiledGraph.invoke(
       { messages: [new HumanMessage(userMessage)] },
       {
+        recursionLimit: (config.maxIterations ?? 10) * 2 + 5,
         configurable: {
           systemPrompt: config.systemPrompt,
           maxIterations: config.maxIterations ?? 10,
