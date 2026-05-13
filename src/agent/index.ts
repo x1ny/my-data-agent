@@ -3,6 +3,7 @@ export { csvToSqlite } from "./csvToSqlite";
 export { jsonObjectToSqlite } from "./jsonObjectToSqlite";
 export { flattenObject } from "./flattenObject";
 export { rowsToSqlite } from "./rowsToSqlite";
+export { createSqliteQueryTool } from "./sqliteQueryTool";
 export type { CreateAgentConfig, AgentRuntime, AgentResult, AgentStep, Tool } from "./types";
 export type { ColumnMeta, IngestOptions, IngestResult, FlattenOptions, Inferred, DataRow } from "./types";
 export type { CsvToSqliteOptions } from "./csvToSqlite";

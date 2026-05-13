@@ -2,12 +2,16 @@ import { ToolMessage } from "@langchain/core/messages";
 import type { AIMessage } from "@langchain/core/messages";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import type { ToolRegistry } from "./registry";
+import type { AgentStep } from "./types";
 
 export async function toolNode(
   state: any,
   config?: RunnableConfig,
 ) {
   const registry = config?.configurable?.registry as ToolRegistry;
+  const onStep = config?.configurable?.onStep as
+    | ((step: AgentStep) => void)
+    | undefined;
 
   const messages = state.messages as AIMessage[];
   const lastMessage = messages[messages.length - 1] as AIMessage | undefined;
@@ -54,10 +58,15 @@ export async function toolNode(
 
   const steps = [...state.steps];
   if (steps.length > 0) {
-    steps[steps.length - 1] = {
+    const updatedStep: AgentStep = {
       ...steps[steps.length - 1],
       observation,
     };
+    steps[steps.length - 1] = updatedStep;
+
+    if (onStep) {
+      onStep(updatedStep);
+    }
   }
 
   return {

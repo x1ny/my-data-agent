@@ -1,0 +1,1 @@
+export { formatIngestResult } from "./formatIngestResult";
