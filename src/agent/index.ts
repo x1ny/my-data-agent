@@ -1,4 +1,9 @@
 export { createAgent } from "./createAgent";
 export { csvToSqlite } from "./csvToSqlite";
+export { jsonObjectToSqlite } from "./jsonObjectToSqlite";
+export { flattenObject } from "./flattenObject";
+export { rowsToSqlite } from "./rowsToSqlite";
 export type { CreateAgentConfig, AgentRuntime, AgentResult, AgentStep, Tool } from "./types";
-export type { ColumnMeta, CsvToSqliteOptions, CsvToSqliteResult } from "./csvToSqlite";
+export type { ColumnMeta, IngestOptions, IngestResult, FlattenOptions, Inferred, DataRow } from "./types";
+export type { CsvToSqliteOptions } from "./csvToSqlite";
+export type { JsonObjectToSqliteOptions } from "./jsonObjectToSqlite";
