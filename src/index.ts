@@ -8,16 +8,28 @@ import { createSqliteQueryTool } from "./agent/sqliteQueryTool";
 const inputDir = Bun.env.INPUT_DIR || path.join(__dirname, '../input');
 const outputDir = Bun.env.OUTPUT_DIR || path.join(__dirname, '../output');
 
+const tasksArg = Bun.argv.find((arg) => arg.startsWith("--tasks="));
+const taskFilter: Set<string> | null = tasksArg
+  ? new Set(
+      tasksArg
+        .split("=")[1]!
+        .split(",")
+        .map((n) => `task_${parseInt(n.trim(), 10)}`),
+    )
+  : null;
+
 const entries = readdirSync(inputDir, { withFileTypes: true });
-    
-    // 过滤掉文件，只保留文件夹名称
-const taskNames = entries.filter(entry => entry.isDirectory()).map(entry => entry.name);
+
+let taskNames = entries
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+
+if (taskFilter) {
+  taskNames = taskNames.filter((name) => taskFilter.has(name));
+  console.log("Filtered tasks:", Array.from(taskFilter));
+}
 for (const taskName of taskNames) {
   let db: Database | undefined;
-
-  if (taskName !== 'task_38') {
-    continue;
-  }
 
   try {
 
@@ -111,7 +123,6 @@ for (const taskName of taskNames) {
 
     //查看the_final_answer表的具体数据
     exportTableToCsv(db, 'the_final_answer', path.join(outputDir, taskName, 'prediction.csv'));
-    prompt('')
     // console.log()
   } catch (error) {
     console.error("处理任务失败:", taskName, error);
@@ -119,44 +130,3 @@ for (const taskName of taskNames) {
     db?.close();
   }
 }
-// const db = new Database(":memory:");
-
-// const result = await csvToSqlite(db,path.join(__dirname, './budget.csv'), {
-//   tableName: 'budget',
-// });
-
-
-
-// const rows = db.query(`SELECT * FROM budget LIMIT 1`).all();
-// console.log(rows);
-
-
-// const patient = await Bun.file(path.join(__dirname, './Patient.json')).json();
-// const patientResult = await jsonObjectToSqlite(db, patient.records, {
-//   tableName: 'patient',
-// });
-
-// // console.log(patientResult);
-
-// const patientRows = db.query(`SELECT * FROM patient LIMIT 1`).all();
-// console.log(patientRows);
-
-// ===== Export CSV Test =====
-{
-  const testDb = new Database(":memory:");
-  testDb.run("CREATE TABLE t (id INTEGER, name TEXT, price REAL)");
-  testDb.run("INSERT INTO t VALUES (1, 'Alice', 9.99)");
-  testDb.run("INSERT INTO t VALUES (2, 'Bob, Jr.', 15.50)");
-  testDb.run("INSERT INTO t VALUES (3, 'Charlie', NULL)");
-
-  const csvPath = path.join("out", "test_export", "result.csv");
-  exportTableToCsv(testDb, "t", csvPath);
-
-  const content = await Bun.file(csvPath).text();
-  console.log("=== Export CSV Test ===");
-  console.log("Output path:", csvPath);
-  console.log(content);
-
-  rmSync("out", { recursive: true, force: true });
-}
-
