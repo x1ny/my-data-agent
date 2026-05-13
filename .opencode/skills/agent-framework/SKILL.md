@@ -1,0 +1,157 @@
+---
+name: agent-framework
+description: ReAct Agent framework built on Bun + LangGraph + OpenAI SDK. Provides createAgent factory with custom tools, zod schema, and observable steps. Use when implementing agents, adding tools, or modifying the agent runtime.
+---
+
+## What I do
+
+This is a ReAct (Reasoning + Acting) Agent framework implemented with:
+- **Bun** as runtime
+- **LangGraph** StateGraph for ReAct loop orchestration
+- **OpenAI SDK** for LLM calls (function calling)
+- **zod** for tool parameter schema (auto-converted to OpenAI JSON Schema)
+- **zod-to-json-schema** for schema translation
+
+## ReAct Loop Topology
+
+```
+START → llmNode → [shouldContinue]
+                     ├── "toolNode" → toolNode → llmNode (loop)
+                     └── END (stop)
+```
+
+## createAgent Usage
+
+```ts
+import { createAgent } from "./agent";
+import { z } from "zod";
+
+const agent = createAgent({
+  tools: [
+    {
+      name: "tool_name",
+      description: "Tool description for LLM",
+      schema: z.object({ param: z.string() }),
+      execute: async ({ param }) => "result", // input auto-typed from schema
+    },
+  ],
+  systemPrompt: "You are a helpful assistant...",
+  maxIterations: 10,        // default 10
+  temperature: 0,            // default 0
+  onStep: (step) => { ... }, // observe each iteration
+});
+
+const { finalAnswer, steps } = await agent.invoke("user question");
+```
+
+## Tool Interface (generic, compile-time type-safe)
+
+```ts
+interface Tool<TSchema extends z.ZodSchema> {
+  name: string;
+  description: string;
+  schema: TSchema;
+  execute: (input: z.infer<TSchema>) => Promise<string>;
+}
+```
+
+- `schema` is converted to OpenAI function calling `parameters` via `zod-to-json-schema`
+- `execute` parameter type is inferred from schema at compile time
+
+## AgentState (Annotation.Root)
+
+```ts
+const AgentState = Annotation.Root({
+  messages:    Annotation<BaseMessage[]>({ reducer: messagesStateReducer }), // append + dedup
+  steps:       Annotation<AgentStep[]>({ reducer: replace }),               // observation back-filled by toolNode
+  iteration:   Annotation<number>({ reducer: replace }),                    // incremented by llmNode
+  loopActive:  Annotation<boolean>({ reducer: replace }),                   // set by llmNode
+});
+```
+
+## AgentStep Structure
+
+```ts
+interface AgentStep {
+  iteration: number;        // which iteration
+  thought: string;          // LLM's reasoning text
+  action?: {                // tool LLM decided to call (absent on final answer)
+    tool: string;
+    input: Record<string, unknown>;
+  };
+  observation?: string;     // tool execution result (filled by toolNode)
+}
+```
+
+## Config Injection (via RunnableConfig.configurable, NOT State)
+
+| Key | Purpose |
+|-----|---------|
+| `systemPrompt` | System prompt, prepended in llmNode each call |
+| `maxIterations` | Max ReAct loops, default 10 |
+| `temperature` | LLM temperature, default 0 |
+| `onStep` | Callback for each step |
+| `registry` | ToolRegistry instance |
+
+These are NOT stored in State — they pass through `configurable`.
+
+## Node Details
+
+### llmNode (`src/agent/llmNode.ts`)
+1. Build message list: `[SystemMessage(systemPrompt), ...state.messages]`
+2. Convert LangChain messages → OpenAI format (handles human/ai/tool, AI tool_calls format conversion)
+3. Call `openai.chat.completions.create({ model, messages, tools, temperature })`
+4. Parse response: if `tool_calls` present → `loopActive = true`; else → `loopActive = false`
+5. Build AgentStep (thought + optional action)
+6. Return `{ messages: [AIMessage], steps: [...prev, newStep], iteration: prev+1, loopActive }`
+
+**SystemMessage is NOT persisted to state.messages** — built inline each call, discarded after LLM invocation.
+
+### toolNode (`src/agent/toolNode.ts`)
+1. Read tool_calls from last AIMessage
+2. For each tool_call: lookup in registry, call `tool.execute(args)`, wrap result in `ToolMessage`
+3. Back-fill `observation` into the last AgentStep
+4. Does NOT modify `loopActive` — LLM decides next step
+
+### shouldContinue (`src/agent/shouldContinue.ts`)
+```ts
+if (state.loopActive && state.iteration < maxIterations) return "toolNode";
+return END;
+```
+
+## ToolRegistry (`src/agent/registry.ts`)
+
+```ts
+class ToolRegistry {
+  private tools: Map<string, Tool> = new Map();
+  register(tool: Tool): void;
+  get(name: string): Tool | undefined;
+  getToolDefs(): object[];  // → [{ type: "function", function: { name, description, parameters } }]
+}
+```
+
+Passed through configurable, never a global singleton.
+
+## Message Format Conversion
+
+OpenAI v6 `tool_calls` type is a union: `ChatCompletionNamedToolChoiceMessageToolCall | ChatCompletionMessageCustomToolCall`. Use `"function" in tc` to narrow before accessing `tc.function`.
+
+LangChain AI `tool_calls` format: `{ id, name, args }` (args is object)
+OpenAI `tool_calls` format: `{ id, type: "function", function: { name, arguments } }` (arguments is JSON string)
+
+## Design Decisions (DO NOT DEVIATE)
+
+1. **Manual message conversion** — no LangChain ToolNode, full control over message formats
+2. **Annotation.Root** — never use MessagesAnnotation (need custom fields)
+3. **SystemMessage ephemeral** — built inline in llmNode, never in state.messages
+4. **ToolRegistry via configurable** — not a global singleton, testable
+5. **zod v3 only** — zod-to-json-schema incompatible with zod v4
+6. **conditionEdges MUST include END** — `{ toolNode: "toolNode", [END]: END }` or LangGraph throws "unknown destination"
+
+## Env Vars
+
+```
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_API_KEY=sk-xxx
+OPENAI_BASE_URL=https://api.openai.com/v1
+```

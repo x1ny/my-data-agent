@@ -1,0 +1,34 @@
+# my-data-agent
+
+Bun + TypeScript + LangGraph + OpenAI SDK ReAct Agent framework.
+
+## Build & Check
+
+```bash
+bun install
+bun run start
+bun run typecheck
+```
+
+## Project Structure
+
+```
+src/
+├── index.ts              # Test entry
+└── agent/
+    ├── index.ts           # Exports: createAgent + all types
+    ├── createAgent.ts     # Factory: registry → graph → compile
+    ├── graph.ts           # StateGraph: START → llmNode ⇄ toolNode → END
+    ├── state.ts           # Annotation.Root
+    ├── llmNode.ts         # OpenAI call → AIMessage
+    ├── toolNode.ts        # Execute tools → ToolMessage
+    ├── shouldContinue.ts  # Route decision
+    ├── registry.ts        # Tool registry
+    └── types.ts           # Shared types
+```
+
+## Key Rules
+
+- **zod v3** only (zod-to-json-schema incompatible with v4)
+- **Env vars**: `OPENAI_MODEL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`
+- **Agent module details**: see `.cursor/rules/agent-framework.mdc` for full API reference and design patterns
