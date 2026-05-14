@@ -8,6 +8,7 @@ export { createNotebookTools } from "./notebookTool";
 export { createDocumentTools } from "./createDocumentTools";
 export { invokeDocExpertAgent } from "./invokeDocExpertAgent";
 export { createAskDocExpertTool } from "./askDocExpertTool";
+export { createValidateResultTool } from "./validateResultTool";
 export type { NotebookTools } from "./notebookTool";
 export type { DocumentEntry } from "./createDocumentTools";
 export type { DocSegment, DocDocument, DocExpertParams, DocExpertResult } from "./invokeDocExpertAgent";

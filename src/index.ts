@@ -8,6 +8,7 @@ import {
   createAgent,
   createNotebookTools,
   createAskDocExpertTool,
+  createValidateResultTool,
 } from "./agent";
 import path from "node:path";
 import { exportTableToCsv, formatIngestResult, summarizeDocument } from "./utils";
@@ -91,7 +92,7 @@ for (const taskName of taskNames) {
           overlap: 2000,
           verbose: true,
         });
-        documents.push({
+documents.push({
           name: doc_file.name,
           summary: summaryResult.summary,
           documentType: summaryResult.documentType,
@@ -213,6 +214,7 @@ for (const taskName of taskNames) {
     write_notebook，这个工具可以让你写入notebook中的内容, 请把你的步骤规划、分析过程、重要知识点，以简洁的语句写入进去。
     read_notebook，这个工具可以让你读取notebook中的内容。
     ${documents.length > 0 ? "ask_doc_expert，这个工具可以让你向文档专家提问，专家会阅读和搜索提供的文档来回答你的问题。" : ""}
+    validate_result，这个工具可以让你验证结果表的结构是否正确。你需要传入对每个列的必要性推理（每次都要完整传入，不要省略）。工具会返回验证通过或不通过，不通过时会给你具体的修改建议。请在写入结果表后反复调用这个工具，直到返回PASS为止。
 
     你需要回答的问题是: ${task_json.question}
 
@@ -230,6 +232,14 @@ for (const taskName of taskNames) {
     if (documents.length > 0) {
       tools.push(createAskDocExpertTool(documents, knowledge));
     }
+
+    const validateResultTool = createValidateResultTool(
+      db,
+      knowledge,
+      task_json.question,
+      readNotebook,
+    );
+    tools.push(validateResultTool);
 
     const agent = createAgent({
       tools,
