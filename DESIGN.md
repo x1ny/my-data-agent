@@ -239,7 +239,7 @@ export interface AgentRuntime {
 }
 ```
 
-> **注意**：`model`、`apiKey`、`baseURL` 不在配置中，统一从环境变量 `OPENAI_MODEL`、`OPENAI_API_KEY`、`OPENAI_BASE_URL` 读取。
+> **注意**：`model`、`apiKey`、`baseURL` 不在配置中，统一从环境变量 `MODEL_NAME`、`MODEL_API_KEY`、`MODEL_API_URL` 读取。
 
 ---
 
@@ -357,11 +357,11 @@ import type { AgentStep } from "../types";
 import type { ToolRegistry } from "../tools/registry";
 
 const openai = new OpenAI({
-  apiKey: process.env["OPENAI_API_KEY"],
-  baseURL: process.env["OPENAI_BASE_URL"],
+  apiKey: process.env["MODEL_API_KEY"],
+  baseURL: process.env["MODEL_API_URL"],
 });
 
-const MODEL = process.env["OPENAI_MODEL"] || "gpt-4o-mini";
+const MODEL = process.env["MODEL_NAME"] || "gpt-4o-mini";
 
 function getContentText(content: unknown): string {
   if (typeof content === "string") return content;
@@ -828,9 +828,9 @@ console.log("\n最终答案:", result.finalAnswer);
 ### .env.example
 
 ```
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_API_KEY=sk-your-key-here
-OPENAI_BASE_URL=https://api.openai.com/v1
+MODEL_NAME=gpt-4o-mini
+MODEL_API_KEY=sk-your-key-here
+MODEL_API_URL=https://api.openai.com/v1
 ```
 
 ---
@@ -989,7 +989,7 @@ bun install
 
 ```bash
 cp .env.example .env
-# 编辑 .env，填入真实的 OPENAI_API_KEY
+# 编辑 .env，填入真实的 MODEL_API_KEY
 ```
 
 ### 运行测试

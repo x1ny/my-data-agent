@@ -151,7 +151,7 @@ OpenAI `tool_calls` format: `{ id, type: "function", function: { name, arguments
 ## Env Vars
 
 ```
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_API_KEY=sk-xxx
-OPENAI_BASE_URL=https://api.openai.com/v1
+MODEL_NAME=gpt-4o-mini
+MODEL_API_KEY=sk-xxx
+MODEL_API_URL=https://api.openai.com/v1
 ```

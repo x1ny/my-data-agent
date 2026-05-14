@@ -28,11 +28,11 @@ export async function summarizeDocument(
   maxRetries = 3,
 ): Promise<SummarizeResult> {
   const openai = new OpenAI({
-    apiKey: process.env["OPENAI_API_KEY"],
-    baseURL: process.env["OPENAI_BASE_URL"],
+    apiKey: process.env["MODEL_API_KEY"],
+    baseURL: process.env["MODEL_API_URL"],
   });
 
-  const model = process.env["OPENAI_MODEL"] || "gpt-4o-mini";
+  const model = process.env["MODEL_NAME"] || "gpt-4o-mini";
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {

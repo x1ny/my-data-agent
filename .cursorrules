@@ -30,5 +30,5 @@ src/
 ## Key Rules
 
 - **zod v3** only (zod-to-json-schema incompatible with v4)
-- **Env vars**: `OPENAI_MODEL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`
+- **Env vars**: `MODEL_NAME`, `MODEL_API_KEY`, `MODEL_API_URL`
 - **Agent module details**: see `.cursor/rules/agent-framework.mdc` for full API reference and design patterns

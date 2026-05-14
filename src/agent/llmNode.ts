@@ -5,11 +5,11 @@ import type { AgentStep } from "./types";
 import type { ToolRegistry } from "./registry";
 
 const openai = new OpenAI({
-  apiKey: process.env["OPENAI_API_KEY"],
-  baseURL: process.env["OPENAI_BASE_URL"],
+  apiKey: process.env["MODEL_API_KEY"],
+  baseURL: process.env["MODEL_API_URL"],
 });
 
-const MODEL = process.env["OPENAI_MODEL"] || "gpt-4o-mini";
+const MODEL = process.env["MODEL_NAME"] || "gpt-4o-mini";
 
 function getContentText(content: unknown): string {
   if (typeof content === "string") return content;

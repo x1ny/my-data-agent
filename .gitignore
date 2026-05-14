@@ -1,6 +1,6 @@
 output
 input
-
+build
 # dependencies (bun install)
 node_modules
 

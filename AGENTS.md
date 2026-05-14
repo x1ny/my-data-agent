@@ -30,5 +30,5 @@ src/
 ## 关键规则
 
 - **zod v3**：zod-to-json-schema 不兼容 zod v4
-- **环境变量**：`OPENAI_MODEL`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`
+- **环境变量**：`MODEL_NAME`、`MODEL_API_KEY`、`MODEL_API_URL`
 - **Skill 按需加载**：Agent 模块的详细设计模式、用法、API 在 `.opencode/skills/agent-framework/SKILL.md`，需要时由 Agent 自动加载
