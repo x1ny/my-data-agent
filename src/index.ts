@@ -42,6 +42,36 @@ if (taskFilter) {
   console.log("Filtered tasks:", Array.from(taskFilter));
 }
 
+// // Sort by difficulty: easy → medium → hard → extreme
+// const DIFFICULTY_ORDER: Record<string, number> = {
+//   easy: 0,
+//   medium: 1,
+//   hard: 2,
+//   extreme: 3,
+// };
+
+// const taskInfos = await Promise.all(
+//   taskNames.map(async (name) => {
+//     const meta = (await Bun.file(
+//       path.join(inputDir, name, "task.json"),
+//     ).json()) as { difficulty: string };
+//     return { name, difficulty: meta.difficulty.toLowerCase() };
+//   }),
+// );
+
+// taskInfos.sort(
+//     (a, b) =>
+//       (DIFFICULTY_ORDER[a.difficulty] ?? 99) -
+//       (DIFFICULTY_ORDER[b.difficulty] ?? 99),
+//   );
+
+// taskNames = taskInfos.map((t) => t.name);
+
+// console.log(
+//   "Task order:",
+//   taskInfos.map((t) => `${t.name}(${t.difficulty})`).join(" → "),
+// );
+
 const extractor = new JsonDatasetExtractor({
   flatten: true,
   ignoreImpurity: true,
