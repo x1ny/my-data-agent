@@ -227,30 +227,30 @@ documents.push({
     }
 
     const systemPrompt = `
-    你是一个资深的数据分析专家，擅长使用SQL查询和数据分析工具来回答用户的问题。
+    You are a senior data analysis expert, exceptionally skilled in rigorous reasoning and analysis, uncovering and recording key insights and logical processes, and utilizing SQL queries and data analysis tools to answer user questions.
 
-    ${ingest_results.length > 0 ? "这是数据库的表结构：" : ""}
+    ${ingest_results.length > 0 ? "This is the database table structure:" : "There is no database table structure.Only use the ask_doc_expert tool to find the relevant information."}
     ${ingest_results.map((result) => formatIngestResult(result)).join("\n")}
 
-    这是背景知识：
+    This is the background knowledge:
     ${knowledge}
 
-    这是提供的相关文档的摘要和类型：
-    ${documents.map((document) => `摘要: ${document.summary}, 类型: ${document.documentType}`).join("\n")}
+    This is the summary and type of the provided related documents:
+    ${documents.map((document) => `Summary: ${document.summary}, Type: ${document.documentType}`).join("\n")}
 
-    你可以使用的工具是:
+    The tools you can use are:
 
-    query_sqlite，这个工具可以让你查询数据库中的数据。
-    write_notebook，这个工具可以让你写入notebook中的内容, 请把你的步骤规划、分析过程、重要知识点，以简洁的语句写入进去。
-    read_notebook，这个工具可以让你读取notebook中的内容。
-    ${documents.length > 0 ? "ask_doc_expert，这个工具可以让你向文档专家提问，专家会阅读和搜索提供的文档来回答你的问题。" : ""}
-    validate_result，这个工具可以让你验证结果表的结构是否正确。你需要传入对每个列的必要性推理（每次都要完整传入，不要省略）。工具会返回验证通过或不通过，不通过时会给你具体的修改建议。请在写入结果表后反复调用这个工具，直到返回PASS为止。
+    query_sqlite，This tool can let you query the data in the database.
+    write_notebook，This tool can let you write the content into the notebook, please write your step planning, analysis process, important knowledge points, in a concise statement.
+    read_notebook，This tool can let you read the content from the notebook.
+    ${documents.length > 0 ? "ask_doc_expert，This tool can let you ask the document expert a question, the expert will read and search the provided documents to answer your question." : ""}
+    validate_result，This tool can let you validate the structure of the result table. You need to input the reasoning for each column's necessity (you must complete it every time, do not omit). The tool will return whether it passes or fails, and if it fails, it will give you specific modification suggestions. Please call this tool repeatedly after writing the result table until it returns PASS.
 
-    你需要回答的问题是: ${task_json.question}
+    The question you need to answer is: ${task_json.question}
 
-    【注意!!!】
-    请将最终答案写入the_final_answer表里， 这张表目前不存在，请结合具体的文档、问题进行深度分析之后，确定这张表的结构，并写入最终答案。
-    结果的列要仅仅包含问题所需的必要列！不能多也不能少！
+    [IMPORTANT!!!]
+    Please write the final answer into the the_final_answer table, this table currently does not exist, please combine the specific documents, questions, and perform deep analysis to determine the structure of this table, and write the final answer into it.
+    The columns of the result should only include the necessary columns required by the question! Not more and not less!
     `;
 
     console.log(systemPrompt);
@@ -282,7 +282,7 @@ documents.push({
     });
 
     const result = await agent.invoke(
-      "请开始分析问题，并给出分析结果。请先在notebook写入你的初步规划。",
+      "Please start analyzing the problem and provide the analysis result. Please write your preliminary plan into the notebook first.",
     );
     console.log(await readNotebook.execute({}));
     console.log(result.finalAnswer);

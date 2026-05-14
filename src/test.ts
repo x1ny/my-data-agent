@@ -33,9 +33,8 @@ const answer = await invokeDocExpertAgent({
       name: "event.md",
       summary: summary.summary,
       documentType: summary.documentType,
-      segments: segments.map(s => ({
-        name: 'event.md',
-        content: file,
+      content: file,
+      segments: segments.map((s) => ({
         summary: s.summary,
         start: s.startIndex,
         end: s.endIndex,

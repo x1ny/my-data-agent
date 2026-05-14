@@ -70,24 +70,24 @@ function buildDocSystemPrompt(
   const lines: string[] = [];
 
   lines.push(
-    "你是一个专业的文档分析助手。请根据提供的文档内容，准确、简洁地回答用户问题。",
+    "You are a professional document analysis assistant. Please provide accurate and concise answers to user questions based on the content of the provided documents.",
   );
   lines.push("");
 
   if (documents.length > 0) {
-    lines.push("## 可用文档");
+    lines.push("## Available Documents");
     lines.push("");
 
     for (let d = 0; d < documents.length; d++) {
       const doc = documents[d]!;
 
-      lines.push(`### 文档: ${doc.name}`);
-      lines.push(`- 类型: ${doc.documentType}`);
-      lines.push(`- 全文摘要: ${doc.summary}`);
+      lines.push(`### Document: ${doc.name}`);
+      lines.push(`- Type: ${doc.documentType}`);
+      lines.push(`- Full Text Summary: ${doc.summary}`);
 
       if (doc.segments.length > 0) {
-        lines.push("- 分段:");
-        lines.push("  | 段 | 字符范围 | 摘要 |");
+        lines.push("- Segments:");
+        lines.push("  | Segment | Character Range | Summary |");
         lines.push("  |----|----------|------|");
         for (const seg of doc.segments) {
           lines.push(
@@ -101,29 +101,35 @@ function buildDocSystemPrompt(
   }
 
   if (knowledge) {
-    lines.push("## 背景知识");
+    lines.push("## Background Knowledge");
     lines.push("");
     lines.push(knowledge);
     lines.push("");
   }
 
-  lines.push("## 工具");
+  lines.push("## Tools");
   lines.push("");
   lines.push(
-    "- read_document: 阅读文档的指定字符范围。查看分段表中的字符范围来定位。",
+    "- read_document: Read the any specified character range of the document. View the character range in the segment table to locate.",
   );
-  lines.push("- search_document: 用正则搜索文档内容。");
+  lines.push("- search_document: Use regular expressions to search the document content.");
   lines.push(
-    "- write_notebook: 写入你的分析规划、推理过程、关键发现。请在开始分析前先写入初步规划。",
+    "- write_notebook: Write your analysis plan, reasoning process, and key findings. Please write the preliminary plan before starting the analysis.",
   );
-  lines.push("- read_notebook: 读取你的推理笔记。");
+  lines.push("- read_notebook: Read your reasoning notebook.");
   lines.push("");
 
-  lines.push("## 要求");
+  lines.push("## Requirements");
   lines.push("");
-  lines.push("- 回答要简洁、准确，直接回应问题");
-  lines.push("- 不要输出无关内容");
-  lines.push("- 先思考规划并写入notebook，再具体分析文档");
+  lines.push("- Answer should be concise, accurate, and directly respond to the question");
+  lines.push("- Do not output irrelevant content");
+  lines.push("- First think about planning and write into the notebook, then analyze the documents in detail");
+
+  lines.push("### Tool Usage Strategy:");
+  lines.push("1. **Initial Planning**: First, write your overall plan in the notebook.");
+  lines.push("2. **Reading First**: Prioritize using `read_document` to read large sections (up to 10,000 characters per call). This is the preferred way to understand the content.");
+  lines.push("3. **Iterative Reading**: If the answer is not in the first chunk, continue reading subsequent chunks.");
+  lines.push("4. **Regex as Fallback**: Use `search_document` only when you need to locate specific keywords across a vast document or after initial broad reading fails to pinpoint the answer.");
 
   return lines.join("\n");
 }
