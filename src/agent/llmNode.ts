@@ -16,6 +16,89 @@ function getContentText(content: unknown): string {
   return JSON.stringify(content);
 }
 
+const XML_PATTERN = /<tool_call>[\s\S]*?<\/tool_call>/;
+
+async function callWithRetry(
+  client: OpenAI,
+  params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+  maxRetries: number,
+): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  let response = await client.chat.completions.create(params);
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const msg = response.choices[0]?.message;
+    if (!msg) break;
+
+    if (msg.tool_calls && msg.tool_calls.length > 0) return response;
+
+    const text = (msg as any).reasoning_content || msg.content || "";
+    if (!XML_PATTERN.test(text)) return response;
+
+    const retryParams = {
+      ...params,
+      messages: [
+        ...(params.messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[]),
+        { role: "assistant" as const, content: text },
+        {
+          role: "user" as const,
+          content:
+            "你必须使用标准的 function calling 格式来调用工具，不要将工具调用写在 XML 标签中。请直接调用对应的 function。",
+        },
+      ],
+    };
+    response = await client.chat.completions.create(retryParams);
+  }
+
+  const lastMsg = response.choices[0]?.message;
+  if (lastMsg && (!lastMsg.tool_calls || lastMsg.tool_calls.length === 0)) {
+    const text = lastMsg.content || (lastMsg as any).reasoning_content || "";
+    const fallback = parseXmlToolCalls(text);
+    if (fallback) {
+      lastMsg.tool_calls = fallback;
+    }
+  }
+
+  return response;
+}
+
+function parseXmlToolCalls(
+  text: string,
+): OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] | null {
+  if (!XML_PATTERN.test(text)) return null;
+
+  const toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] = [];
+  const regex = new RegExp(XML_PATTERN.source, "g");
+  let block: RegExpExecArray | null;
+  let i = 0;
+
+  while ((block = regex.exec(text)) !== null) {
+    const b = block[0];
+
+    const funcMatch = b.match(/<function=(\w+)>/);
+    if (!funcMatch) continue;
+
+    const funcName = funcMatch[1]!;
+    const params: Record<string, string> = {};
+
+    const paramRegex = /<parameter=(\w+)>([\s\S]*?)<\/parameter>/g;
+    let pm: RegExpExecArray | null;
+    while ((pm = paramRegex.exec(b)) !== null) {
+      params[pm[1]!] = pm[2]!.trim();
+    }
+
+    toolCalls.push({
+      id: `call_xml_${Date.now()}_${i++}`,
+      type: "function" as const,
+      function: {
+        name: funcName,
+        arguments: JSON.stringify(params),
+      },
+    });
+  }
+
+  return toolCalls.length > 0 ? toolCalls : null;
+}
+
 export async function llmNode(
   state: any,
   config?: RunnableConfig,
@@ -66,12 +149,12 @@ export async function llmNode(
     }
   }
 
-  const response = await openai.chat.completions.create({
+  const response = await callWithRetry(openai, {
     model: MODEL,
     messages: openaiMessages,
     tools: toolDefs.length > 0 ? (toolDefs as any) : undefined,
     temperature,
-  });
+  }, 3);
 
   const choice = response.choices[0];
   if (!choice) {
@@ -86,8 +169,10 @@ export async function llmNode(
     thought: message.content || "",
   };
 
-  if (message.tool_calls && message.tool_calls.length > 0) {
-    const tc = message.tool_calls[0]!;
+  let toolCalls = message.tool_calls;
+
+  if (toolCalls && toolCalls.length > 0) {
+    const tc = toolCalls[0]!;
     const func = "function" in tc ? tc.function : undefined;
     if (func) {
       step.action = {
@@ -100,7 +185,7 @@ export async function llmNode(
   const aiMessage = new AIMessage({
     content: message.content || "",
     tool_calls:
-      message.tool_calls?.flatMap((tc) => {
+      toolCalls?.flatMap((tc) => {
         if (!("function" in tc)) return [];
         return [
           {
@@ -112,7 +197,7 @@ export async function llmNode(
       }) ?? [],
   });
 
-  const loopActive = !!(message.tool_calls && message.tool_calls.length > 0);
+  const loopActive = !!(toolCalls && toolCalls.length > 0);
 
   const newSteps = [...state.steps, step];
 
