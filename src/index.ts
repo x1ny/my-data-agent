@@ -9,8 +9,9 @@ import {
   createNotebookTools,
 } from "./agent";
 import path from "node:path";
-import { exportTableToCsv, formatIngestResult } from "./utils";
+import { exportTableToCsv, formatIngestResult, summarizeDocument } from "./utils";
 import { createSqliteQueryTool } from "./agent/sqliteQueryTool";
+import { segmentDocument, type Segment } from "./segmenter";
 
 const inputDir = Bun.env.INPUT_DIR || path.join(__dirname, "../input");
 const outputDir = Bun.env.OUTPUT_DIR || path.join(__dirname, "../output");
@@ -62,6 +63,35 @@ for (const taskName of taskNames) {
 
     const ingest_results: IngestResult[] = [];
 
+    const documents: {
+      summary: string;
+      documentType: string;
+      segments: Segment[]
+    }[] = []
+    if (existsSync(path.join(context_dir, "doc"))) {
+      const doc_files = readdirSync(path.join(context_dir, "doc"), {
+        withFileTypes: true,
+      }).filter((entry) => entry.isFile());
+      console.log(
+        "存在文档文件:",
+        doc_files.map((entry) => entry.name),
+      );
+      for (const doc_file of doc_files) {
+        const file = await Bun.file(path.join(context_dir, "doc", doc_file.name)).text();
+        const summaryResult = await summarizeDocument(file);
+        const segments = await segmentDocument(file, {
+          chunkSize: 60000,
+          overlap: 2000,
+          verbose: true,
+        });
+        documents.push({
+          summary: summaryResult.summary,
+          documentType: summaryResult.documentType,
+          segments: segments,
+        });
+      }
+    }
+   
     if (existsSync(path.join(context_dir, "csv"))) {
       const csv_files = readdirSync(path.join(context_dir, "csv"), {
         withFileTypes: true,
@@ -148,6 +178,9 @@ for (const taskName of taskNames) {
 
     这是背景知识：
     ${knowledge}
+
+    这是提供的相关文档的摘要和类型：
+    ${documents.map((document) => `摘要: ${document.summary}, 类型: ${document.documentType}`).join("\n")}
 
     你可以使用的工具是:
 
