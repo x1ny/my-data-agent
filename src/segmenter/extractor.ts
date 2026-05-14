@@ -28,10 +28,10 @@ CRITICAL RULES:
 2. Return segments in the EXACT SAME ORDER as they appear in the text — do not reorder.
 3. Segments MUST cover the ENTIRE text continuously from beginning to end with NO gaps.
 4. Typically produce 3-5 segments per chunk, but adapt to the text's natural structure.
-5. Each segment should aim for a length of 5,000 to 15,000 words.
+5. Each segment should aim for a length of 10,000 to 20,000 words.MUST not be less than 5,000 words.
 
 For each segment, provide:
-- "summary": A concise summary (~100 words) capturing the core content.
+- "summary":A high-density, ultra-concise summary (max 30 words). Focus strictly on the "Core Event/Argument" and "Key Outcome." Strip all introductory phrases (e.g., "This section talks about...") and use telegraphic style to ensure maximum information with minimum words.
 - "end_str": The LAST 15-30 words of this segment, COPIED VERBATIM from the original text. This is the most important field — it MUST be an exact substring matchable in the source text. Do NOT paraphrase, translate, rewrite, truncate, or modify it in any way. Include all punctuation, spaces, and line breaks exactly as they appear in the original. If the segment ends with a natural sentence boundary, "end_str" should include that final sentence or clause.
 
 Return ONLY a JSON object in this exact format:
