@@ -7,12 +7,15 @@ import {
   type IngestResult,
   createAgent,
   createNotebookTools,
+  createAskDocExpertTool,
 } from "./agent";
 import path from "node:path";
 import { exportTableToCsv, formatIngestResult, summarizeDocument } from "./utils";
 import { createSqliteQueryTool } from "./agent/sqliteQueryTool";
-import { segmentDocument, type Segment } from "./segmenter";
+import { segmentDocument } from "./segmenter";
+import type { DocDocument } from "./agent";
 
+console.time('start');
 const inputDir = Bun.env.INPUT_DIR || path.join(__dirname, "../input");
 const outputDir = Bun.env.OUTPUT_DIR || path.join(__dirname, "../output");
 
@@ -63,11 +66,7 @@ for (const taskName of taskNames) {
 
     const ingest_results: IngestResult[] = [];
 
-    const documents: {
-      summary: string;
-      documentType: string;
-      segments: Segment[]
-    }[] = []
+    const documents: DocDocument[] = []
     if (existsSync(path.join(context_dir, "doc"))) {
       const doc_files = readdirSync(path.join(context_dir, "doc"), {
         withFileTypes: true,
@@ -85,9 +84,15 @@ for (const taskName of taskNames) {
           verbose: true,
         });
         documents.push({
+          name: doc_file.name,
           summary: summaryResult.summary,
           documentType: summaryResult.documentType,
-          segments: segments,
+          content: file,
+          segments: segments.map((seg) => ({
+            summary: seg.summary,
+            start: seg.startIndex,
+            end: seg.endIndex,
+          })),
         });
       }
     }
@@ -187,6 +192,7 @@ for (const taskName of taskNames) {
     query_sqlite，这个工具可以让你查询数据库中的数据。
     write_notebook，这个工具可以让你写入notebook中的内容, 请把你的步骤规划、分析过程、重要知识点，以简洁的语句写入进去。
     read_notebook，这个工具可以让你读取notebook中的内容。
+    ${documents.length > 0 ? "ask_doc_expert，这个工具可以让你向文档专家提问，专家会阅读和搜索提供的文档来回答你的问题。" : ""}
 
     你需要回答的问题是: ${task_json.question}
 
@@ -199,8 +205,14 @@ for (const taskName of taskNames) {
 
     const { readNotebook, writeNotebook } = createNotebookTools();
 
+    const tools: any[] = [createSqliteQueryTool(db), readNotebook, writeNotebook];
+
+    if (documents.length > 0) {
+      tools.push(createAskDocExpertTool(documents, knowledge));
+    }
+
     const agent = createAgent({
-      tools: [createSqliteQueryTool(db), readNotebook, writeNotebook],
+      tools,
       systemPrompt: systemPrompt,
       maxIterations: 100,
       temperature: 0,
@@ -236,3 +248,4 @@ for (const taskName of taskNames) {
     db?.close();
   }
 }
+console.timeEnd('start');
