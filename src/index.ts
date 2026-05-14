@@ -14,6 +14,7 @@ import { exportTableToCsv, formatIngestResult, summarizeDocument } from "./utils
 import { createSqliteQueryTool } from "./agent/sqliteQueryTool";
 import { segmentDocument } from "./segmenter";
 import type { DocDocument } from "./agent";
+import { JsonDatasetExtractor } from "./utils/extract";
 
 console.time('start');
 const inputDir = Bun.env.INPUT_DIR || path.join(__dirname, "../input");
@@ -39,6 +40,13 @@ if (taskFilter) {
   taskNames = taskNames.filter((name) => taskFilter.has(name));
   console.log("Filtered tasks:", Array.from(taskFilter));
 }
+
+const extractor = new JsonDatasetExtractor({
+  flatten: true,
+  ignoreImpurity: true,
+  promoteMapKeys: true,
+});
+
 for (const taskName of taskNames) {
   let db: Database | undefined;
 
@@ -134,9 +142,21 @@ for (const taskName of taskNames) {
             tableName: json_data.table,
           });
           ingest_results.push(result);
+        } else {
+          const result = extractor.extract(json_data);
+          if (result.length == 0) {
+            continue;
+          }
+          for (const dataset of result) {
+            const result = await jsonObjectToSqlite(db, dataset.rows, {
+              tableName: dataset.name,
+            });
+            ingest_results.push(result);
+          }
         }
       }
     }
+
 
     if (existsSync(path.join(context_dir, "db"))) {
       const db_files = readdirSync(path.join(context_dir, "db"), {
