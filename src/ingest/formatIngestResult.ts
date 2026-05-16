@@ -1,4 +1,4 @@
-import type { IngestResult } from "../agent/types";
+import type { IngestResult } from "./types";
 
 export function formatIngestResult(result: IngestResult): string {
   const lines: string[] = [];

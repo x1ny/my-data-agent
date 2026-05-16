@@ -1,10 +1,6 @@
 import { z } from "zod";
-import type { Tool } from "./types";
-
-export interface DocumentEntry {
-  name: string;
-  content: string;
-}
+import type { Tool } from "../agent/types";
+import type { DocumentEntry } from "../doc/types";
 
 interface SearchMatch {
   startIndex: number;

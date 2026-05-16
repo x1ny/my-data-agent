@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { z } from "zod";
-import type { Tool } from "./types";
+import type { Tool } from "../agent/types";
 
 const DEFAULT_MAX_ROWS = 1000;
 const DEFAULT_MAX_COLS = 20;

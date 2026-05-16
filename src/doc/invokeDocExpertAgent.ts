@@ -1,36 +1,8 @@
-import { createAgent } from "./createAgent";
-import { createDocumentTools, type DocumentEntry } from "./createDocumentTools";
-import { createNotebookTools } from "./notebookTool";
-import type { AgentStep } from "./types";
-
-export interface DocSegment {
-  summary: string;
-  start: number;
-  end: number;
-}
-
-export interface DocDocument {
-  name: string;
-  summary: string;
-  documentType: string;
-  segments: DocSegment[];
-  content: string;
-}
-
-export interface DocExpertParams {
-  documents: DocDocument[];
-  knowledge?: string;
-  question: string;
-  maxIterations?: number;
-  temperature?: number;
-  onStep?: (step: AgentStep) => void;
-}
-
-export interface DocExpertResult {
-  answer: string;
-  notebook: string;
-  steps: AgentStep[];
-}
+import { createAgent } from "../agent/createAgent";
+import { createDocumentTools } from "../tools/createDocumentTools";
+import { createNotebookTools } from "../tools/notebookTool";
+import type { AgentStep } from "../agent/types";
+import type { DocDocument, DocSegment, DocExpertParams, DocExpertResult, DocumentEntry } from "./types";
 
 export async function invokeDocExpertAgent(
   params: DocExpertParams,

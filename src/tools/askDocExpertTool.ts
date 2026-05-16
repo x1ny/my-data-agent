@@ -1,6 +1,7 @@
 import { z } from "zod";
-import type { Tool } from "./types";
-import { invokeDocExpertAgent, type DocDocument } from "./invokeDocExpertAgent";
+import type { Tool } from "../agent/types";
+import type { DocDocument } from "../doc/types";
+import { invokeDocExpertAgent } from "../doc/invokeDocExpertAgent";
 
 export function createAskDocExpertTool(documents: DocDocument[], knowledge?: string): Tool {
   return {

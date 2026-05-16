@@ -1,12 +1,12 @@
 import { segmentDocument } from "./segmenter";
 import path from "node:path";
-import { summarizeDocument } from "./utils/summarizeDocument";
-import { invokeDocExpertAgent } from "./agent/invokeDocExpertAgent";
+import { summarizeDocument } from "./summarizeDocument";
+import { invokeDocExpertAgent } from "./invokeDocExpertAgent";
 
 
 console.time('summarizeDocument');
 const file = await Bun.file(
-  path.join(__dirname, "../input/task_350/context/doc/event.md"),
+  path.join(__dirname, "../../input/task_350/context/doc/event.md"),
 ).text();
 const summary = await summarizeDocument(file);
 console.log(summary);
@@ -23,7 +23,7 @@ console.log(segments);
 console.timeEnd('segmentDocument');
 
 const knowledge = await Bun.file(
-  path.join(__dirname, "../input/task_350/context/knowledge.md"),
+  path.join(__dirname, "../../input/task_350/context/knowledge.md"),
 ).text();
 
 console.time('invokeDocExpertAgent');

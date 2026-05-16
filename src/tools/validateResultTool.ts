@@ -1,23 +1,10 @@
 import type { Database } from "bun:sqlite";
 import OpenAI from "openai";
 import { z } from "zod";
-import type { Tool } from "./types";
+import type { Tool } from "../agent/types";
 
 const RESULT_TABLE = "the_final_answer";
 const DATA_SAMPLE_ROWS = 30;
-
-declare module "openai" {
-  namespace OpenAI {
-    namespace Chat {
-      interface ChatCompletionCreateParamsNonStreaming {
-        enable_thinking?: boolean;
-      }
-      interface ChatCompletionCreateParamsStreaming {
-        enable_thinking?: boolean;
-      }
-    }
-  }
-}
 
 export function createValidateResultTool(
   db: Database,

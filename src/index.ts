@@ -1,25 +1,29 @@
 import { readdirSync } from "node:fs";
 import { Database } from "bun:sqlite";
+import { createAgent } from "./agent";
+import {
+  createSqliteQueryTool,
+  createNotebookTools,
+  createAskDocExpertTool,
+  createValidateResultTool,
+} from "./tools";
+import path from "node:path";
+import {
+  exportTableToCsv,
+} from "./utils";
 import {
   csvToSqlite,
   jsonObjectToSqlite,
   flattenObject,
-  type IngestResult,
-  createAgent,
-  createNotebookTools,
-  createAskDocExpertTool,
-  createValidateResultTool,
-} from "./agent";
-import path from "node:path";
-import {
-  exportTableToCsv,
   formatIngestResult,
+  JsonDatasetExtractor,
+  type IngestResult,
+} from "./ingest";
+import {
+  segmentDocument,
   summarizeDocument,
-} from "./utils";
-import { createSqliteQueryTool } from "./agent/sqliteQueryTool";
-import { segmentDocument } from "./segmenter";
-import type { DocDocument } from "./agent";
-import { JsonDatasetExtractor } from "./utils/extract";
+  type DocDocument,
+} from "./doc";
 import { Glob } from "bun";
 
 console.time("start");

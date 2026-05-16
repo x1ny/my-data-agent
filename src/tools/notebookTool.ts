@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Tool } from "./types";
+import type { Tool } from "../agent/types";
 
 export interface NotebookTools {
   readNotebook: Tool;
