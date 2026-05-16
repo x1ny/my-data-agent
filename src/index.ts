@@ -1,4 +1,4 @@
-import { readdirSync, existsSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { Database } from "bun:sqlite";
 import {
   csvToSqlite,
@@ -11,13 +11,18 @@ import {
   createValidateResultTool,
 } from "./agent";
 import path from "node:path";
-import { exportTableToCsv, formatIngestResult, summarizeDocument } from "./utils";
+import {
+  exportTableToCsv,
+  formatIngestResult,
+  summarizeDocument,
+} from "./utils";
 import { createSqliteQueryTool } from "./agent/sqliteQueryTool";
 import { segmentDocument } from "./segmenter";
 import type { DocDocument } from "./agent";
 import { JsonDatasetExtractor } from "./utils/extract";
+import { Glob } from "bun";
 
-console.time('start');
+console.time("start");
 const inputDir = Bun.env.INPUT_DIR || path.join(__dirname, "../input");
 const outputDir = Bun.env.OUTPUT_DIR || path.join(__dirname, "../output");
 
@@ -60,10 +65,10 @@ if (taskFilter) {
 // );
 
 // taskInfos.sort(
-//     (a, b) =>
-//       (DIFFICULTY_ORDER[a.difficulty] ?? 99) -
-//       (DIFFICULTY_ORDER[b.difficulty] ?? 99),
-//   );
+//   (a, b) =>
+//     (DIFFICULTY_ORDER[a.difficulty] ?? 99) -
+//     (DIFFICULTY_ORDER[b.difficulty] ?? 99),
+// );
 
 // taskNames = taskInfos.map((t) => t.name);
 
@@ -105,129 +110,158 @@ for (const taskName of taskNames) {
 
     const ingest_results: IngestResult[] = [];
 
-    const documents: DocDocument[] = []
-    if (existsSync(path.join(context_dir, "doc"))) {
-      const doc_files = readdirSync(path.join(context_dir, "doc"), {
-        withFileTypes: true,
-      }).filter((entry) => entry.isFile());
-      console.log(
-        "存在文档文件:",
-        doc_files.map((entry) => entry.name),
-      );
-      for (const doc_file of doc_files) {
-        const file = await Bun.file(path.join(context_dir, "doc", doc_file.name)).text();
-        const summaryResult = await summarizeDocument(file);
-        const segments = await segmentDocument(file, {
-          chunkSize: 60000,
-          overlap: 2000,
-          verbose: true,
-        });
-documents.push({
-          name: doc_file.name,
-          summary: summaryResult.summary,
-          documentType: summaryResult.documentType,
-          content: file,
-          segments: segments.map((seg) => ({
-            summary: seg.summary,
-            start: seg.startIndex,
-            end: seg.endIndex,
-          })),
-        });
+    const documents: DocDocument[] = [];
+
+    {
+      const docPatterns = [
+        "**/*.txt",
+        "**/*.md",
+        "**/*.markdown",
+        "**/*.html",
+        "**/*.htm",
+        "**/*.xml",
+        "**/*.rst",
+      ];
+      const docFiles: string[] = [];
+      for (const pattern of docPatterns) {
+        const glob = new Glob(pattern);
+        for await (const f of glob.scan(context_dir)) {
+          docFiles.push(f);
+        }
       }
-    }
-   
-    if (existsSync(path.join(context_dir, "csv"))) {
-      const csv_files = readdirSync(path.join(context_dir, "csv"), {
-        withFileTypes: true,
-      }).filter((entry) => entry.isFile() && entry.name.endsWith(".csv"));
-      console.log(
-        "存在csv文件:",
-        csv_files.map((entry) => entry.name),
-      );
-      for (const csv_file of csv_files) {
-        const result = await csvToSqlite(
-          db,
-          path.join(context_dir, "csv", csv_file.name),
-          {
-            tableName: csv_file.name.split(".")[0] || csv_file.name,
-          },
-        );
-        ingest_results.push(result);
+      if (docFiles.length > 0) {
+        console.log("存在文档文件:", docFiles);
+        for (const docFile of docFiles) {
+          if (docFile == "knowledge.md") {
+            continue;
+          }
+
+          const filePath = path.join(context_dir, docFile);
+          const file = await Bun.file(filePath).text();
+          const docName = path.basename(docFile);
+          const summaryResult = await summarizeDocument(file);
+          const segments = await segmentDocument(file, {
+            chunkSize: 60000,
+            overlap: 2000,
+            verbose: true,
+          });
+          documents.push({
+            name: docName,
+            summary: summaryResult.summary,
+            documentType: summaryResult.documentType,
+            content: file,
+            segments: segments.map((seg) => ({
+              summary: seg.summary,
+              start: seg.startIndex,
+              end: seg.endIndex,
+            })),
+          });
+        }
       }
     }
 
-    if (existsSync(path.join(context_dir, "json"))) {
-      const json_files = readdirSync(path.join(context_dir, "json"), {
-        withFileTypes: true,
-      }).filter((entry) => entry.isFile() && entry.name.endsWith(".json"));
-      console.log(
-        "存在json文件:",
-        json_files.map((entry) => entry.name),
-      );
-      for (const json_file of json_files) {
-        const json_data = await Bun.file(
-          path.join(context_dir, "json", json_file.name),
-        ).json();
-        if (json_data.records && json_data.table) {
-          const result = await jsonObjectToSqlite(db, json_data.records, {
-            tableName: json_data.table,
-          });
+    {
+      const csvGlob = new Glob("**/*.csv");
+      const csvFiles: string[] = [];
+      for await (const f of csvGlob.scan(context_dir)) {
+        csvFiles.push(f);
+      }
+      if (csvFiles.length > 0) {
+        console.log("存在csv文件:", csvFiles);
+        for (const csvFile of csvFiles) {
+          const csvName = path.basename(csvFile);
+          const result = await csvToSqlite(
+            db,
+            path.join(context_dir, csvFile),
+            {
+              tableName: csvName.split(".")[0] || csvName,
+            },
+          );
           ingest_results.push(result);
-        } else {
-          const result = extractor.extract(json_data);
-          if (result.length == 0) {
-            continue;
-          }
-          for (const dataset of result) {
-            const result = await jsonObjectToSqlite(db, dataset.rows, {
-              tableName: dataset.name,
+        }
+      }
+    }
+
+    {
+      const jsonGlob = new Glob("**/*.json");
+      const jsonFiles: string[] = [];
+      for await (const f of jsonGlob.scan(context_dir)) {
+        jsonFiles.push(f);
+      }
+      if (jsonFiles.length > 0) {
+        console.log("存在json文件:", jsonFiles);
+        for (const jsonFile of jsonFiles) {
+          const jsonData = await Bun.file(
+            path.join(context_dir, jsonFile),
+          ).json();
+          if (jsonData.records && jsonData.table) {
+            const result = await jsonObjectToSqlite(db, jsonData.records, {
+              tableName: jsonData.table,
             });
             ingest_results.push(result);
+          } else {
+            const result = extractor.extract(jsonData);
+            if (result.length == 0) {
+              continue;
+            }
+            for (const dataset of result) {
+              const result = await jsonObjectToSqlite(db, dataset.rows, {
+                tableName: dataset.name,
+              });
+              ingest_results.push(result);
+            }
           }
         }
       }
     }
 
-
-    if (existsSync(path.join(context_dir, "db"))) {
-      const db_files = readdirSync(path.join(context_dir, "db"), {
-        withFileTypes: true,
-      }).filter((entry) => entry.isFile() && entry.name.endsWith(".db"));
-      console.log(
-        "存在db文件:",
-        db_files.map((entry) => entry.name),
-      );
-      for (const db_file of db_files) {
-        let sourceDb: Database | undefined;
-        try {
-          sourceDb = new Database(path.join(context_dir, "db", db_file.name), {
-            readonly: true,
-          });
-          const tables = sourceDb
-            .query(
-              "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
-            )
-            .all() as { name: string }[];
-          for (const table of tables) {
-            const rows = sourceDb
-              .query(`SELECT * FROM "${table.name}"`)
-              .all() as Record<string, unknown>[];
-            if (rows.length > 0) {
-              const tablePrefix = db_file.name.replace(/\.db$/, "");
-              const result = await jsonObjectToSqlite(db, rows, {
-                tableName: `${tablePrefix}_${table.name}`,
-              });
-              ingest_results.push(result);
+    {
+      const dbPatterns = ["**/*.db", "**/*.sqlite"];
+      const dbFiles: string[] = [];
+      for (const pattern of dbPatterns) {
+        const glob = new Glob(pattern);
+        for await (const f of glob.scan(context_dir)) {
+          dbFiles.push(f);
+        }
+      }
+      if (dbFiles.length > 0) {
+        console.log("存在db文件:", dbFiles);
+        for (const dbFile of dbFiles) {
+          let sourceDb: Database | undefined;
+          try {
+            sourceDb = new Database(path.join(context_dir, dbFile), {
+              readonly: true,
+            });
+            const tables = sourceDb
+              .query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+              )
+              .all() as { name: string }[];
+            for (const table of tables) {
+              const rows = sourceDb
+                .query(`SELECT * FROM "${table.name}"`)
+                .all() as Record<string, unknown>[];
+              if (rows.length > 0) {
+                const tablePrefix = path
+                  .basename(dbFile)
+                  .replace(/\.(db|sqlite)$/, "");
+                const result = await jsonObjectToSqlite(db, rows, {
+                  tableName: `${tablePrefix}_${table.name}`,
+                });
+                ingest_results.push(result);
+              }
             }
+          } finally {
+            sourceDb?.close();
           }
-        } finally {
-          sourceDb?.close();
         }
       }
     }
 
     const systemPrompt = `
     You are a senior data analysis expert, exceptionally skilled in rigorous reasoning and analysis, uncovering and recording key insights and logical processes, and utilizing SQL queries and data analysis tools to answer user questions.
+
+    current date is 2025/05/10
 
     ${ingest_results.length > 0 ? "This is the database table structure:" : "There is no database table structure.Only use the ask_doc_expert tool to find the relevant information."}
     ${ingest_results.map((result) => formatIngestResult(result)).join("\n")}
@@ -257,7 +291,11 @@ documents.push({
 
     const { readNotebook, writeNotebook } = createNotebookTools();
 
-    const tools: any[] = [createSqliteQueryTool(db), readNotebook, writeNotebook];
+    const tools: any[] = [
+      createSqliteQueryTool(db),
+      readNotebook,
+      writeNotebook,
+    ];
 
     if (documents.length > 0) {
       tools.push(createAskDocExpertTool(documents, knowledge));
@@ -308,4 +346,4 @@ documents.push({
     db?.close();
   }
 }
-console.timeEnd('start');
+console.timeEnd("start");
