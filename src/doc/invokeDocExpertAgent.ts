@@ -2,7 +2,13 @@ import { createAgent } from "../agent/createAgent";
 import { createDocumentTools } from "../tools/createDocumentTools";
 import { createNotebookTools } from "../tools/notebookTool";
 import type { AgentStep } from "../agent/types";
-import type { DocDocument, DocSegment, DocExpertParams, DocExpertResult, DocumentEntry } from "./types";
+import type {
+  DocDocument,
+  DocSegment,
+  DocExpertParams,
+  DocExpertResult,
+  DocumentEntry,
+} from "./types";
 
 export async function invokeDocExpertAgent(
   params: DocExpertParams,
@@ -62,9 +68,7 @@ function buildDocSystemPrompt(
         lines.push("  | Segment | Character Range | Summary |");
         lines.push("  |----|----------|------|");
         for (const seg of doc.segments) {
-          lines.push(
-            `  | ${seg.start}-${seg.end} | ${seg.summary}`,
-          );
+          lines.push(`  | ${seg.start}-${seg.end} | ${seg.summary}`);
         }
       }
 
@@ -84,24 +88,39 @@ function buildDocSystemPrompt(
   lines.push(
     "- read_document: Read the any specified character range of the document. View the character range in the segment table to locate.",
   );
-  lines.push("- search_document: Use regular expressions to search the document content.");
+  lines.push(
+    "- search_document: Use regular expressions to search the document content.",
+  );
   lines.push(
     "- write_notebook: Write your analysis plan, reasoning process, and key findings. Please write the preliminary plan before starting the analysis.",
   );
   lines.push("- read_notebook: Read your reasoning notebook.");
+  lines.push("- answer: To answer the question.");
   lines.push("");
 
   lines.push("## Requirements");
   lines.push("");
-  lines.push("- Answer should be concise, accurate, and directly respond to the question");
+  lines.push(
+    "- Answer should be concise, accurate, and directly respond to the question",
+  );
   lines.push("- Do not output irrelevant content");
-  lines.push("- First think about planning and write into the notebook, then analyze the documents in detail");
+  lines.push(
+    "- First think about planning and write into the notebook, then analyze the documents in detail",
+  );
 
   lines.push("### Tool Usage Strategy:");
-  lines.push("1. **Initial Planning**: First, write your overall plan in the notebook.");
-  lines.push("2. **Reading First**: Prioritize using `read_document` to read large sections (up to 10,000 characters per call). This is the preferred way to understand the content.");
-  lines.push("3. **Iterative Reading**: If the answer is not in the first chunk, continue reading subsequent chunks.");
-  lines.push("4. **Regex as Fallback**: Use `search_document` only when you need to locate specific keywords across a vast document or after initial broad reading fails to pinpoint the answer.");
+  lines.push(
+    "1. **Initial Planning**: First, write your overall plan in the notebook.",
+  );
+  lines.push(
+    "2. **Reading First**: Prioritize using `read_document` to read large sections (up to 10,000 characters per call). This is the preferred way to understand the content.",
+  );
+  lines.push(
+    "3. **Iterative Reading**: If the answer is not in the first chunk, continue reading subsequent chunks.",
+  );
+  lines.push(
+    "4. **Regex as Fallback**: Use `search_document` only when you need to locate specific keywords across a vast document or after initial broad reading fails to pinpoint the answer.",
+  );
 
   return lines.join("\n");
 }

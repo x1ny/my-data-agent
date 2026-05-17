@@ -8,8 +8,22 @@ export function shouldContinue(
   const maxIterations =
     (config?.configurable?.maxIterations as number) ?? 10;
 
-  if (state.loopActive && state.iteration < maxIterations) {
+  if (state.done) {
+    return END;
+  }
+
+  if (state.iteration < maxIterations) {
     return "toolNode";
   }
   return END;
+}
+
+export function afterToolNode(
+  state: any,
+  _config?: RunnableConfig,
+): string {
+  if (state.done) {
+    return END;
+  }
+  return "llmNode";
 }

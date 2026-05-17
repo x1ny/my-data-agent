@@ -18,6 +18,10 @@ function getContentText(content: unknown): string {
 
 const XML_PATTERN = /<tool_call>[\s\S]*?<\/tool_call>/;
 
+const RETRY_PROMPT = `You must respond by calling a tool. Use the \`<tool_call>\` format for each tool call, for example:
+\`<tool_call><function=tool_name><parameter=param1>value1</parameter></function></tool_call>\`
+If you are ready to provide the final answer, call the \`answer\` tool. Do not output plain text without a tool call.`;
+
 async function callWithRetry(
   client: OpenAI,
   params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
@@ -32,8 +36,6 @@ async function callWithRetry(
     if (msg.tool_calls && msg.tool_calls.length > 0) return response;
 
     const text = (msg as any).reasoning_content || msg.content || "";
-    if (!XML_PATTERN.test(text)) return response;
-
     const retryParams = {
       ...params,
       messages: [
@@ -41,8 +43,7 @@ async function callWithRetry(
         { role: "assistant" as const, content: text },
         {
           role: "user" as const,
-          content:
-            "你必须使用标准的 function calling 格式来调用工具，不要将工具调用写在 XML 标签中。请直接调用对应的 function。",
+          content: RETRY_PROMPT,
         },
       ],
     };
@@ -55,6 +56,10 @@ async function callWithRetry(
     const fallback = parseXmlToolCalls(text);
     if (fallback) {
       lastMsg.tool_calls = fallback;
+    } else {
+      throw new Error(
+        "Agent failed to call a tool after retries. The model returned plain text without any tool call or valid `<tool_call>` XML.",
+      );
     }
   }
 
@@ -99,12 +104,9 @@ function parseXmlToolCalls(
   return toolCalls.length > 0 ? toolCalls : null;
 }
 
-export async function llmNode(
-  state: any,
-  config?: RunnableConfig,
-) {
+export async function llmNode(state: any, config?: RunnableConfig) {
   const systemPrompt = config?.configurable?.systemPrompt as string;
-  const temperature = (config?.configurable?.temperature as number) ?? 0;
+  const temperature = (config?.configurable?.temperature as number) ?? 0.1;
   const onStep = config?.configurable?.onStep as
     | ((step: AgentStep) => void)
     | undefined;
@@ -149,12 +151,16 @@ export async function llmNode(
     }
   }
 
-  const response = await callWithRetry(openai, {
-    model: MODEL,
-    messages: openaiMessages,
-    tools: toolDefs.length > 0 ? (toolDefs as any) : undefined,
-    temperature,
-  }, 3);
+  const response = await callWithRetry(
+    openai,
+    {
+      model: MODEL,
+      messages: openaiMessages,
+      tools: toolDefs.length > 0 ? (toolDefs as any) : undefined,
+      temperature,
+    },
+    5,
+  );
 
   const choice = response.choices[0];
   if (!choice) {
@@ -197,8 +203,6 @@ export async function llmNode(
       }) ?? [],
   });
 
-  const loopActive = !!(toolCalls && toolCalls.length > 0);
-
   const newSteps = [...state.steps, step];
 
   if (onStep) {
@@ -209,6 +213,5 @@ export async function llmNode(
     messages: [aiMessage],
     steps: newSteps,
     iteration,
-    loopActive,
   };
 }

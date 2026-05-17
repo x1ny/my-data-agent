@@ -8,9 +8,7 @@ import {
   createValidateResultTool,
 } from "./tools";
 import path from "node:path";
-import {
-  exportTableToCsv,
-} from "./utils";
+import { exportTableToCsv } from "./utils";
 import {
   csvToSqlite,
   jsonObjectToSqlite,
@@ -19,11 +17,7 @@ import {
   JsonDatasetExtractor,
   type IngestResult,
 } from "./ingest";
-import {
-  segmentDocument,
-  summarizeDocument,
-  type DocDocument,
-} from "./doc";
+import { segmentDocument, summarizeDocument, type DocDocument } from "./doc";
 import { Glob } from "bun";
 
 console.time("start");
@@ -283,6 +277,7 @@ for (const taskName of taskNames) {
     read_notebook，This tool can let you read the content from the notebook.
     ${documents.length > 0 ? "ask_doc_expert，This tool can let you ask the document expert a question, the expert will read and search the provided documents to answer your question." : ""}
     validate_result，This tool can let you validate the structure of the result table. You need to input the reasoning for each column's necessity (you must complete it every time, do not omit). The tool will return whether it passes or fails, and if it fails, it will give you specific modification suggestions. Please call this tool repeatedly after writing the result table until it returns PASS.
+    answer, use to answer the question
 
     The question you need to answer is: ${task_json.question}
 

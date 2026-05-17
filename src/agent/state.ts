@@ -18,8 +18,13 @@ export const AgentState = Annotation.Root({
     default: () => 0,
   }),
 
-  loopActive: Annotation<boolean>({
+  done: Annotation<boolean>({
     reducer: (_, next) => next,
     default: () => false,
+  }),
+
+  finalAnswer: Annotation<string>({
+    reducer: (_, next) => next,
+    default: () => "",
   }),
 });

@@ -2,7 +2,7 @@ import { END, StateGraph } from "@langchain/langgraph";
 import { AgentState } from "./state";
 import { llmNode } from "./llmNode";
 import { toolNode } from "./toolNode";
-import { shouldContinue } from "./shouldContinue";
+import { shouldContinue, afterToolNode } from "./shouldContinue";
 import type { ToolRegistry } from "./registry";
 
 export function buildGraph(registry: ToolRegistry) {
@@ -14,7 +14,10 @@ export function buildGraph(registry: ToolRegistry) {
       toolNode: "toolNode",
       [END]: END,
     })
-    .addEdge("toolNode", "llmNode");
+    .addConditionalEdges("toolNode", afterToolNode, {
+      llmNode: "llmNode",
+      [END]: END,
+    });
 
   return graph;
 }

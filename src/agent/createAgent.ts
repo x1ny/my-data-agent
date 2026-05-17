@@ -1,10 +1,21 @@
 import { HumanMessage } from "@langchain/core/messages";
+import { z } from "zod";
 import { ToolRegistry } from "./registry";
 import { buildGraph } from "./graph";
 import type { CreateAgentConfig, AgentRuntime } from "./types";
 
+const answerTool = {
+  name: "answer",
+  description: "Provide the final answer to the user. Call this tool when you have completed your analysis and are ready to output the result.",
+  schema: z.object({
+    content: z.string().describe("The final answer to the user's question"),
+  }),
+  execute: async ({ content }: { content: string }) => content,
+};
+
 export function createAgent(config: CreateAgentConfig): AgentRuntime {
   const registry = new ToolRegistry();
+  registry.register(answerTool);
   for (const tool of config.tools) {
     registry.register(tool);
   }
@@ -27,19 +38,8 @@ export function createAgent(config: CreateAgentConfig): AgentRuntime {
       },
     );
 
-    const messages = result.messages;
-    const lastMessage = messages[messages.length - 1];
-
-    let finalAnswer = "";
-    if (lastMessage) {
-      finalAnswer =
-        typeof lastMessage.content === "string"
-          ? lastMessage.content
-          : JSON.stringify(lastMessage.content);
-    }
-
     return {
-      finalAnswer,
+      finalAnswer: result.finalAnswer ?? "",
       steps: result.steps ?? [],
     };
   };

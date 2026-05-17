@@ -69,8 +69,19 @@ export async function toolNode(
     }
   }
 
-  return {
+  const usedAnswer = lastMessage.tool_calls.some(
+    (tc) => tc.name === "answer",
+  );
+
+  const result: any = {
     messages: toolMessages,
     steps,
   };
+
+  if (usedAnswer) {
+    result.done = true;
+    result.finalAnswer = observation;
+  }
+
+  return result;
 }
